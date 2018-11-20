@@ -131,7 +131,7 @@ public class WechatServiceImpl implements WechatService {
     public List getUserAsMessage() {
         Set<String> keys = redisTemplate.keys(USER_WECHAT_SESSION_REDIS_KEY + "*");
         List list = redisTemplate.opsForValue().multiGet(keys);
-        return null;
+        return list;
     }
 
     @Override
