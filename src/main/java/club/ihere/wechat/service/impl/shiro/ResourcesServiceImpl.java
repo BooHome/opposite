@@ -15,10 +15,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class ResourcesServiceImpl implements ResourcesService {
-    @Autowired
+    @Autowired(required = false)
     private SysResourcesMapper sysResourcesMapper;
 
-    @Autowired
+    @Autowired(required = false)
     private SysRoleResourcesMapper sysRoleResourcesMapper;
 
     @Override

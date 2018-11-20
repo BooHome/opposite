@@ -10,12 +10,19 @@ import club.ihere.common.message.req.BaseEvent;
 import club.ihere.common.message.req.TextReqMsg;
 import club.ihere.common.util.current.JsonUtil;
 import club.ihere.controller.BaseWechatController;
+import club.ihere.wechat.bean.pojo.base.WechatUsermember;
+import club.ihere.wechat.bean.pojo.base.WechatUsermemberExample;
 import club.ihere.wechat.common.config.WeChatConfig;
+import club.ihere.wechat.common.exception.WechatException;
+import club.ihere.wechat.service.wechat.WechatService;
 import com.alibaba.fastjson.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.UnsupportedEncodingException;
 
 /**
  * @author: fengshibo
@@ -28,6 +35,9 @@ public class WechatController extends BaseWechatController {
 
     private static Logger logger = LoggerFactory.getLogger(WechatController.class);
 
+    @Autowired
+    private WechatService wechatService;
+
     @Override
     protected String getToken() {
         return WeChatConfig.getToken();
@@ -36,15 +46,15 @@ public class WechatController extends BaseWechatController {
 
     @Override
     protected BaseMsg handleSubscribe(BaseEvent event) {
-        String fromUserName = event.getFromUserName();
-        logger.info(JsonUtil.toJson(event));
-        return new TextMsg("感谢您的关注!");
+        try {
+            return wechatService.saveBySubscribe(event);
+        } catch (UnsupportedEncodingException e) {
+            throw new WechatException("字段编码失败");
+        }
     }
 
     @Override
     protected BaseMsg handleTextMsg(TextReqMsg msg) {
-        String content = msg.getContent();
-        logger.debug("用户发送到服务器的内容:{}", content);
-        return new TextMsg("服务器回复用户消息!");
+        return wechatService.receiveTextMsg(msg);
     }
 }

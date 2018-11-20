@@ -1,7 +1,10 @@
 package club.ihere.wechat.advince;
 
+import club.ihere.common.message.BaseMsg;
+import club.ihere.common.message.TextMsg;
 import club.ihere.common.util.current.StringConvertUtil;
 import club.ihere.exception.ParameterValidationException;
+import club.ihere.wechat.common.exception.WechatException;
 import club.ihere.wechat.common.json.JsonResult;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -84,6 +87,11 @@ public class ExceptionControllerAdvice {
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ModelAndView handleHttpMediaTypeNotSupportedException(HttpServletRequest request, HttpMediaTypeNotSupportedException e) throws Exception {
         return generateExceptionModelAndView(request, e, new JsonResult<>(false, "[415]不支持当前媒体类型(Unsupported Media Type): " + e.getMessage()), HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @ExceptionHandler(WechatException.class)
+    public BaseMsg handleHttpMediaTypeNotSupportedException(HttpServletRequest request, WechatException e) throws Exception {
+        return new TextMsg(e.getMessage());
     }
 
     /**

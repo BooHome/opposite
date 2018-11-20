@@ -17,10 +17,11 @@ import java.util.Set;
 
 @Service
 public class UserServiceImpl implements UserService {
-    @Autowired
+
+    @Autowired(required = false)
     private SysUserMapper userMapper;
 
-    @Autowired
+    @Autowired(required = false)
     private SysResourcesMapper sysResourcesMapper;
 
    /* @Override
@@ -39,18 +40,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public SysUser getUserByUserInfo(SysUser user) {
-        SysUserExample sysUserExample=new SysUserExample();
+        SysUserExample sysUserExample = new SysUserExample();
         sysUserExample.createCriteria().andUserNameEqualTo(user.getUserName()).andPassWordEqualTo(user.getPassWord());
         List<SysUser> sysUsers = userMapper.selectByExample(sysUserExample);
-        return sysUsers.size()>0?sysUsers.get(0):null;
+        return sysUsers.size() > 0 ? sysUsers.get(0) : null;
     }
 
     @Override
     public SysUser findByUserName(String username) {
-        SysUserExample sysUserExample=new SysUserExample();
+        SysUserExample sysUserExample = new SysUserExample();
         sysUserExample.createCriteria().andUserNameEqualTo(username);
         List<SysUser> sysUsers = userMapper.selectByExample(sysUserExample);
-        return sysUsers.size()>0?sysUsers.get(0):null;
+        return sysUsers.size() > 0 ? sysUsers.get(0) : null;
     }
 
     @Override

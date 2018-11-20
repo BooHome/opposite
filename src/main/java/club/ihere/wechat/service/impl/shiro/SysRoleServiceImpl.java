@@ -12,7 +12,7 @@ import java.util.Set;
 @Service
 public class SysRoleServiceImpl implements SysRoleService {
 
-    @Autowired
+    @Autowired(required = false)
     private SysRoleMapper sysRoleMapper;
 
     @Override
