@@ -6,6 +6,7 @@ import club.ihere.common.message.req.TextReqMsg;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author: fengshibo
@@ -62,9 +63,25 @@ public interface WechatService {
     List<String> getUserAsMessage();
 
     /**
+     * 配对两个用户
+     * @param openId
+     * @return
+     */
+    Map<String,String> getUserToUser(String openId);
+
+
+    /**
      * 接收文本消息
      * @param msg
      * @return
      */
     BaseMsg receiveTextMsg(TextReqMsg msg);
+
+    /**
+     * 通过昵称获取名称
+     * @param openId
+     * @return
+     */
+    String getNickName(String openId);
+
 }

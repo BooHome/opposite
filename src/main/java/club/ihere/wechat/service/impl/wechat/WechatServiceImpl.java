@@ -1,5 +1,6 @@
 package club.ihere.wechat.service.impl.wechat;
 
+import club.ihere.common.api.MessageAPI;
 import club.ihere.common.api.UserAPI;
 import club.ihere.common.api.response.GetUserInfoResponse;
 import club.ihere.common.api.response.GetUsersResponse;
@@ -8,10 +9,12 @@ import club.ihere.common.message.TextMsg;
 import club.ihere.common.message.req.BaseEvent;
 import club.ihere.common.message.req.TextReqMsg;
 import club.ihere.common.util.current.StringUtil;
+import club.ihere.wechat.bean.pojo.base.WechatMessage;
 import club.ihere.wechat.bean.pojo.base.WechatUsermember;
 import club.ihere.wechat.bean.pojo.base.WechatUsermemberExample;
 import club.ihere.wechat.common.config.WeChatConfig;
 import club.ihere.wechat.common.enums.WechatUserEnums;
+import club.ihere.wechat.mapper.base.WechatMessageMapper;
 import club.ihere.wechat.mapper.base.WechatUsermemberMapper;
 import club.ihere.wechat.service.wechat.WechatService;
 import org.slf4j.Logger;
@@ -24,7 +27,10 @@ import org.springframework.stereotype.Service;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -42,8 +48,15 @@ public class WechatServiceImpl implements WechatService {
 
     private static final Integer USER_WECHAT_SESSION_REDIS_KEY_DATE = 23;
 
+    private static final String USER_WECHAT_MESSAGE_KEY = "userMessage:";
+
+    private static final String USER_MESSAGE_TYPE = "树洞树洞";
+
     @Autowired(required = false)
     private WechatUsermemberMapper wechatUsermemberMapper;
+
+    @Autowired
+    private WechatMessageMapper wechatMessageMapper;
 
     @Autowired
     @Qualifier("baseRedisTemplate")
@@ -128,18 +141,108 @@ public class WechatServiceImpl implements WechatService {
     }
 
     @Override
-    public  List<String> getUserAsMessage() {
+    public List<String> getUserAsMessage() {
         Set<String> keys = redisTemplate.keys(USER_WECHAT_SESSION_REDIS_KEY + "*");
         List<String> list = redisTemplate.opsForValue().multiGet(keys);
         return list;
     }
 
     @Override
+    public Map<String, String> getUserToUser(String openId) {
+        Map<String, String> map = new HashMap<>();
+        Object o = redisTemplate.opsForValue().get(openId);
+        if (o == null || StringUtil.hasBlank(o.toString())) {
+            List<String> userAsMessage = getUserAsMessage();
+            if (userAsMessage == null || userAsMessage.size() == 0) {
+                return null;
+            }
+            userAsMessage.remove(openId);
+            if (userAsMessage == null || userAsMessage.size() == 0) {
+                return null;
+            }
+            Random random = new Random();
+            String toUserOpenId = userAsMessage.get(random.nextInt(userAsMessage.size()));
+            redisTemplate.delete(USER_WECHAT_SESSION_REDIS_KEY + openId);
+            redisTemplate.delete(USER_WECHAT_SESSION_REDIS_KEY + toUserOpenId);
+            map.put(openId, toUserOpenId);
+            redisTemplate.opsForValue().set(openId, toUserOpenId, USER_WECHAT_SESSION_REDIS_KEY_DATE, TimeUnit.HOURS);
+            redisTemplate.opsForValue().set(toUserOpenId, openId, USER_WECHAT_SESSION_REDIS_KEY_DATE, TimeUnit.HOURS);
+        } else {
+            map.put(openId, o.toString());
+        }
+        return map;
+    }
+
+    @Override
     public BaseMsg receiveTextMsg(TextReqMsg msg) {
-        String openID=msg.getFromUserName();
-        this.saveUserAsMessage(openID);
-        String content = msg.getContent();
-        logger.info("用户发送到服务器的内容:{}", content);
-        return new TextMsg("服务器回复用户消息!");
+        String openID = msg.getFromUserName();
+        WechatMessage wechatMessage=new WechatMessage();
+        wechatMessage.setOpenid(openID);
+        wechatMessage.setMessage(msg.getContent());
+        wechatMessageMapper.insertSelective(wechatMessage);
+        if ("清除".equals(msg.getContent())) {
+            Map<String, String> userToUser = getUserToUser(openID);
+            if (userToUser == null) {
+                redisTemplate.delete(openID);
+                redisTemplate.delete(USER_WECHAT_MESSAGE_KEY + openID);
+                redisTemplate.delete(USER_WECHAT_SESSION_REDIS_KEY + openID);
+                return new TextMsg("清除历史消息啦!");
+            } else {
+                redisTemplate.delete(openID);
+                redisTemplate.delete(userToUser.get(openID));
+                redisTemplate.delete(USER_WECHAT_MESSAGE_KEY + openID);
+                redisTemplate.delete(USER_WECHAT_SESSION_REDIS_KEY + openID);
+                saveUserAsMessage(userToUser.get(openID));
+                MessageAPI messageAPI = new MessageAPI(WeChatConfig.apiConfig);
+                messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg("[" + getNickName(userToUser.get(openID)) + "]清空消息了哦！"));
+                return new TextMsg("清除历史消息啦!");
+            }
+        } else {
+            if (USER_MESSAGE_TYPE.equals(msg.getContent())) {
+                redisTemplate.opsForValue().set(USER_WECHAT_MESSAGE_KEY + openID, msg.getContent(), USER_WECHAT_SESSION_REDIS_KEY_DATE, TimeUnit.HOURS);
+                //树洞树洞
+                Map<String, String> userToUser = getUserToUser(openID);
+                if (userToUser == null) {
+                    saveUserAsMessage(openID);
+                    redisTemplate.delete(openID);
+                    return new TextMsg("不好意思，目前树洞对面空空如也哦!");
+                } else {
+                    MessageAPI messageAPI = new MessageAPI(WeChatConfig.apiConfig);
+                    messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg("[" + getNickName(openID) + "]和您匹配到了哦!开始对话吧"));
+                    return new TextMsg("[" + getNickName(userToUser.get(openID)) + "]和您匹配到了哦!开始对话吧");
+                }
+            }
+            Object o = redisTemplate.opsForValue().get(USER_WECHAT_MESSAGE_KEY + openID);
+            if (o == null || StringUtil.isBlank(o.toString())) {
+                redisTemplate.opsForValue().set(USER_WECHAT_MESSAGE_KEY + openID, msg.getContent(), USER_WECHAT_SESSION_REDIS_KEY_DATE, TimeUnit.HOURS);
+                //其他
+                return new TextMsg("您的消息树洞已经收到啦!");
+            } else if (USER_MESSAGE_TYPE.equals(o.toString())) {
+                Map<String, String> userToUser = getUserToUser(openID);
+                return getBaseMsg(msg.getContent(), openID, userToUser);
+            } else {
+                //其他
+                return new TextMsg("您的消息树洞已经收到啦!");
+            }
+        }
+    }
+
+    @Override
+    public String getNickName(String openId) {
+        UserAPI userAPI = new UserAPI(WeChatConfig.apiConfig);
+        GetUserInfoResponse userInfo = userAPI.getUserInfo(openId);
+        return userInfo.getNickname();
+    }
+
+    private BaseMsg getBaseMsg(String content, String openID, Map<String, String> userToUser) {
+        if (userToUser == null) {
+            return new TextMsg("不好意思，目前树洞对面空空如也哦!");
+        } else {
+            MessageAPI messageAPI = new MessageAPI(WeChatConfig.apiConfig);
+            messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg(content));
+            logger.info("用户发送到服务器的内容:{}", content);
+            return null;
+            //return new TextMsg("您的消息["+getNickName(userToUser.get(openID))+"]已经收到啦!");
+        }
     }
 }
