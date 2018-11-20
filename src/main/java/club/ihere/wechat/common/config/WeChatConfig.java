@@ -19,13 +19,15 @@ public class WeChatConfig extends BaseConfig {
     public static ApiConfig apiConfig;
 
     static {
-        String appId=config.getString("wechat.appid");
-        String appSecret=config.getString("wechat.secret");
-        Boolean enableJsApi=config.getString("wechat.secret").equals("true");
-        apiConfig=new ApiConfig(appId,appSecret,enableJsApi);
+        String appId = config.getString("wechat.appid");
+        String appSecret = config.getString("wechat.secret");
+        Boolean enableJsApi = config.getString("wechat.secret").equals("true");
+        apiConfig = new ApiConfig(appId, appSecret, enableJsApi);
     }
 
-    public static String getToken(){
+    public static String getToken() {
         return config.getString("wechat.token");
     }
+
+
 }

@@ -20,3 +20,6 @@
   @RequiresPermissions({"DEL"})
   shiro具体权限使用该注解
   ~~~
+  
+  
+ 1. 随机选择两名用户为一对。发送消息
