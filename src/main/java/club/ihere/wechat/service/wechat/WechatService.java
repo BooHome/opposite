@@ -59,7 +59,7 @@ public interface WechatService {
      *
      * @return
      */
-    List getUserAsMessage();
+    List<String> getUserAsMessage();
 
     /**
      * 接收文本消息

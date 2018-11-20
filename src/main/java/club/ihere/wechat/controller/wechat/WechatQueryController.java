@@ -27,8 +27,8 @@ public class WechatQueryController {
     private WechatService wechatService;
 
     @GetMapping("getUserAsMessage")
-    public JsonResult<List> getUserAsMessage(){
-        List result=wechatService.getUserAsMessage();
+    public JsonResult< List<String>> getUserAsMessage(){
+        List<String> result=wechatService.getUserAsMessage();
         return JsonResultBuilder.build(result);
     }
 
