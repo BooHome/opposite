@@ -55,7 +55,7 @@ public class WechatServiceImpl implements WechatService {
     @Autowired(required = false)
     private WechatUsermemberMapper wechatUsermemberMapper;
 
-    @Autowired
+    @Autowired(required = false)
     private WechatMessageMapper wechatMessageMapper;
 
     @Autowired
@@ -194,7 +194,7 @@ public class WechatServiceImpl implements WechatService {
                 redisTemplate.delete(USER_WECHAT_SESSION_REDIS_KEY + openID);
                 saveUserAsMessage(userToUser.get(openID));
                 MessageAPI messageAPI = new MessageAPI(WeChatConfig.apiConfig);
-                messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg("[" + getNickName(userToUser.get(openID)) + "]清空消息了哦！"));
+                messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg("[" + getNickName(openID) + "]清空消息了哦！"));
                 return new TextMsg("清除历史消息啦!");
             }
         } else {
@@ -208,7 +208,8 @@ public class WechatServiceImpl implements WechatService {
                     return new TextMsg("不好意思，目前树洞对面空空如也哦!");
                 } else {
                     MessageAPI messageAPI = new MessageAPI(WeChatConfig.apiConfig);
-                    messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg("[" + getNickName(openID) + "]和您匹配到了哦!开始对话吧"));
+                    messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg());
+                    getBaseMsg("[" + getNickName(openID) + "]和您匹配到了哦!开始对话吧",openID,userToUser);
                     return new TextMsg("[" + getNickName(userToUser.get(openID)) + "]和您匹配到了哦!开始对话吧");
                 }
             }
@@ -239,7 +240,13 @@ public class WechatServiceImpl implements WechatService {
             return new TextMsg("不好意思，目前树洞对面空空如也哦!");
         } else {
             MessageAPI messageAPI = new MessageAPI(WeChatConfig.apiConfig);
-            messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg(content));
+            UserAPI userAPI=new UserAPI(WeChatConfig.apiConfig);
+            GetUserInfoResponse userInfo = userAPI.getUserInfo(userToUser.get(openID));
+            if(WechatUserEnums.SubscribeEnum.OPEN_STATUS.getValue().equals(userInfo.getSubscribe())){
+                messageAPI.sendCustomMessage(userToUser.get(openID), new TextMsg(content));
+            }else{
+                return new TextMsg("不好意思，"+userInfo.getNickname()+"关闭树洞功能了哦!");
+            }
             logger.info("用户发送到服务器的内容:{}", content);
             return null;
             //return new TextMsg("您的消息["+getNickName(userToUser.get(openID))+"]已经收到啦!");
